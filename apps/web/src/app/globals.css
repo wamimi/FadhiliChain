@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+@theme {
+  --color-moss: #3f5a2a;
+  --color-moss-deep: #22351a;
+  --color-moss-mid: #2d4421;
+  --color-moss-soft: #5b7a43;
+  --color-sand: #ddd6c6;
+  --color-sand-deep: #cbc2ae;
+  --color-cream: #f4efe4;
+  --color-paper: #fbf8f1;
+  --color-ink: #1d2417;
+  --color-lime: #d4f25c;
+  --color-lime-deep: #b9d93f;
+  --color-muted: #5d6152;
+  --color-danger: #a8321f;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+  --line: rgb(29 36 23 / 0.12);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-lime);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-lime-deep);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@layer components {
+  .display {
+    font-weight: 900;
+    line-height: 0.88;
+    letter-spacing: -0.045em;
+    text-transform: uppercase;
+  }
+  .display-shadow {
+    text-shadow: 0.045em 0.045em 0 var(--color-moss-deep);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      transform 0.2s var(--ease-out-expo),
+      background-color 0.2s,
+      border-color 0.2s,
+      opacity 0.2s;
+  }
+  .pill:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .pill:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .pill-lime {
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+  .pill-lime:hover:not(:disabled) {
+    background: var(--color-lime-deep);
+  }
+  .pill-ink {
+    background: var(--color-ink);
+    color: var(--color-cream);
+  }
+  .pill-ink:hover:not(:disabled) {
+    background: var(--color-moss-deep);
+  }
+  .pill-ghost-light {
+    border: 1.5px solid rgb(244 239 228 / 0.5);
+    color: var(--color-cream);
+  }
+  .pill-ghost-light:hover {
+    background: rgb(244 239 228 / 0.1);
+  }
+  .pill-ghost {
+    border: 1.5px solid var(--line);
+    color: var(--color-ink);
+    background: transparent;
+  }
+  .pill-ghost:hover {
+    border-color: var(--color-ink);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgb(244 239 228 / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(244 239 228 / 0.07) 1px, transparent 1px);
+    background-size: 104px 104px;
+    background-position: -1px -1px;
+  }
+  .field {
+    width: 100%;
+    min-height: 3rem;
+    border-radius: 14px;
+    border: 1.5px solid var(--line);
+    background: var(--color-paper);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-moss);
+  }
+  .label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .hint {
+    font-size: 0.875rem;
+    color: var(--color-muted);
+    margin-top: 0.4rem;
+  }
+  .prose-body p + p {
+    margin-top: 1em;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bob {
+  50% {
+    translate: 0 -12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .doc h2 {
+    margin-top: 2.6rem;
+    margin-bottom: 0.8rem;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  .doc h3 {
+    margin-top: 1.6rem;
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .doc p + p,
+  .doc p + ul,
+  .doc ul + p,
+  .doc ol + p,
+  .doc p + ol {
+    margin-top: 1em;
+  }
+  .doc ul,
+  .doc ol {
+    padding-left: 1.3rem;
+  }
+  .doc ul {
+    list-style: disc;
+  }
+  .doc ol {
+    list-style: decimal;
+  }
+  .doc li + li {
+    margin-top: 0.4em;
+  }
+  .doc a {
+    font-weight: 600;
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
