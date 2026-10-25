@@ -148,11 +148,11 @@ contract CampaignTest is Test {
     function test_TC06_implementationAndClonesCannotBeReinitialised() public {
         Campaign impl = Campaign(factory.implementation());
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(IERC20(address(kes)), mallory, mallory, 1, deadline, 0);
+        impl.initialize(IERC20(address(kes)), mallory, mallory, 1, deadline, 0, 0);
 
         Campaign c = _create(address(kes), TARGET);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        c.initialize(IERC20(address(kes)), mallory, mallory, 1, deadline, 0);
+        c.initialize(IERC20(address(kes)), mallory, mallory, 1, deadline, 0, 0);
     }
 
     function test_TC07_listsCampaignsWithPagination() public {
@@ -520,6 +520,78 @@ contract CampaignTest is Test {
         vm.expectRevert(CampaignFactory.InvalidOrganiserSignature.selector);
         vm.prank(admin);
         factory.createCampaign(req, sig);
+    }
+
+    // ---------------------------------------------------------------- platform fee
+
+    address treasury = makeAddr("treasury");
+
+    function test_TC33_feeIsTakenOnlyOnSuccessfulWithdrawal() public {
+        vm.prank(admin);
+        factory.setFee(200, treasury);
+        Campaign c = _create(address(kes), TARGET);
+        assertEq(c.feeBps(), 200);
+        _give(c, alice, TARGET);
+        vm.warp(deadline);
+        vm.prank(recipient);
+        c.withdraw();
+        assertEq(kes.balanceOf(treasury), TARGET * 2 / 100);
+        assertEq(kes.balanceOf(recipient), TARGET * 98 / 100);
+        assertEq(kes.balanceOf(address(c)), 0);
+    }
+
+    function test_TC34_refundsAreNeverCharged() public {
+        vm.prank(admin);
+        factory.setFee(500, treasury);
+        Campaign c = _create(address(kes), TARGET);
+        _give(c, alice, 1_000 ether);
+        vm.warp(deadline);
+        vm.prank(alice);
+        c.claimRefund();
+        assertEq(kes.balanceOf(alice), 1_000 ether);
+        assertEq(kes.balanceOf(treasury), 0);
+    }
+
+    function test_TC35_feeIsCappedAndNeedsTreasury() public {
+        vm.startPrank(admin);
+        vm.expectRevert(CampaignFactory.FeeTooHigh.selector);
+        factory.setFee(501, treasury);
+        vm.expectRevert(CampaignFactory.ZeroAddress.selector);
+        factory.setFee(100, address(0));
+        vm.stopPrank();
+        vm.expectRevert();
+        vm.prank(mallory);
+        factory.setFee(100, mallory);
+    }
+
+    function test_TC36_existingCampaignsKeepTheirRate() public {
+        vm.prank(admin);
+        factory.setFee(100, treasury);
+        Campaign c = _create(address(kes), TARGET);
+        vm.prank(admin);
+        factory.setFee(500, treasury);
+        assertEq(c.feeBps(), 100);
+        _give(c, alice, TARGET);
+        vm.warp(deadline);
+        vm.prank(recipient);
+        c.withdraw();
+        assertEq(kes.balanceOf(treasury), TARGET / 100);
+    }
+
+    function test_TC37_blockedTreasuryCannotBlockPayout() public {
+        BlocklistToken blk = new BlocklistToken();
+        vm.startPrank(admin);
+        factory.setTokenAllowed(address(blk), true);
+        factory.setFee(200, treasury);
+        vm.stopPrank();
+        Campaign c = _create(address(blk), TARGET);
+        _give(c, alice, TARGET);
+        blk.setBlocked(treasury, true);
+        vm.warp(deadline);
+        vm.prank(recipient);
+        c.withdraw();
+        assertEq(blk.balanceOf(recipient), TARGET);
+        assertEq(blk.balanceOf(treasury), 0);
     }
 
     // ---------------------------------------------------------------- fuzz

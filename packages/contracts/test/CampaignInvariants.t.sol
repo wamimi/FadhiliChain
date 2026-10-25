@@ -91,6 +91,7 @@ contract CampaignInvariantTest is Test {
         factory.grantRole(factory.APPROVER_ROLE(), admin);
         factory.grantRole(factory.CANCELLER_ROLE(), admin);
         factory.setTokenAllowed(address(token), true);
+        factory.setFee(200, makeAddr("treasury"));
         (address organiser, uint256 organiserKey) = makeAddrAndKey("organiser");
         CampaignFactory.CampaignRequest memory req = CampaignFactory.CampaignRequest({
             token: address(token),
@@ -133,7 +134,7 @@ contract CampaignInvariantTest is Test {
         assertEq(sumOutstanding, campaign.totalRaised() - campaign.totalRefunded());
     }
 
-    /// Money in equals money held plus money paid out.
+    /// Money in equals money held plus money paid out (to the recipient and the treasury).
     function invariant_conservation() public view {
         uint256 refunded = campaign.totalRefunded();
         assertEq(token.balanceOf(address(campaign)) + refunded + handler.ghostWithdrawn(), campaign.totalRaised());

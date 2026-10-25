@@ -31,6 +31,9 @@ contract CampaignFactory is AccessControlDefaultAdminRules, EIP712 {
     uint256 public constant MIN_DURATION = 1 hours;
     uint256 public constant MAX_DURATION = 365 days;
 
+    /// @notice Highest platform fee the admin can set: 5%.
+    uint16 public constant MAX_FEE_BPS = 500;
+
     struct CampaignRequest {
         address token;
         address organiser;
@@ -44,12 +47,18 @@ contract CampaignFactory is AccessControlDefaultAdminRules, EIP712 {
 
     address public immutable implementation;
 
+    /// @notice Fee in basis points applied to campaigns created from now on. Existing campaigns keep their own rate.
+    uint16 public feeBps;
+    /// @notice Receives the platform fee when a successful campaign is withdrawn.
+    address public treasury;
+
     mapping(address token => bool) public isTokenAllowed;
     mapping(address campaign => bool) public isCampaign;
     mapping(address organiser => uint256) public nonces;
     address[] private _campaigns;
 
     event TokenAllowed(address indexed token, bool allowed);
+    event FeeUpdated(uint16 feeBps, address treasury);
     event CampaignCreated(
         address indexed campaign,
         address indexed organiser,
@@ -66,6 +75,7 @@ contract CampaignFactory is AccessControlDefaultAdminRules, EIP712 {
     error RequestExpired();
     error InvalidNonce(uint256 expected, uint256 provided);
     error InvalidOrganiserSignature();
+    error FeeTooHigh();
 
     constructor(address admin, uint48 adminTransferDelay)
         AccessControlDefaultAdminRules(adminTransferDelay, admin)
@@ -78,6 +88,17 @@ contract CampaignFactory is AccessControlDefaultAdminRules, EIP712 {
         if (token == address(0)) revert ZeroAddress();
         isTokenAllowed[token] = allowed;
         emit TokenAllowed(token, allowed);
+    }
+
+    /// @notice Set the platform fee for future campaigns and the address that receives fees.
+    /// @dev Changing the rate never affects campaigns that already exist. Changing the treasury redirects fees
+    ///      of existing campaigns that have not been withdrawn yet, but can never take more than their fixed rate.
+    function setFee(uint16 feeBps_, address treasury_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeBps_ > MAX_FEE_BPS) revert FeeTooHigh();
+        if (feeBps_ != 0 && treasury_ == address(0)) revert ZeroAddress();
+        feeBps = feeBps_;
+        treasury = treasury_;
+        emit FeeUpdated(feeBps_, treasury_);
     }
 
     /// @notice EIP-712 digest the organiser signs for `req`.
@@ -122,7 +143,7 @@ contract CampaignFactory is AccessControlDefaultAdminRules, EIP712 {
 
         campaign = Clones.clone(implementation);
         Campaign(campaign).initialize(
-            IERC20(req.token), req.organiser, req.recipient, req.target, req.deadline, req.metadataHash
+            IERC20(req.token), req.organiser, req.recipient, req.target, req.deadline, req.metadataHash, feeBps
         );
 
         isCampaign[campaign] = true;

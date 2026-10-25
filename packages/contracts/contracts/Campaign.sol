@@ -7,6 +7,10 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
+interface IFeeSource {
+    function treasury() external view returns (address);
+}
+
 /// @title Campaign
 /// @notice Holds the contributions for one fundraiser and enforces its release and refund rules.
 /// @dev Deployed as an EIP-1167 clone by CampaignFactory and initialised in the same transaction.
@@ -17,7 +21,8 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 ///  - After the deadline with `totalRaised < target`, or once cancelled, each donor may reclaim their own contribution once.
 ///  - Withdrawal and refunds are mutually exclusive: `withdrawn` blocks cancellation, and cancellation or failure blocks withdrawal.
 ///  - Nobody, including platform administrators, can send campaign funds anywhere other than the recipient (on success)
-///    or the donor who paid them (on failure or cancellation).
+///    or the donor who paid them (on failure or cancellation). The only exception is the platform fee, which is taken
+///    once, on a successful withdrawal, at the rate fixed when the campaign was created. Refunds are never charged.
 ///
 /// Tokens sent to this contract without calling `contribute` are not recorded and cannot be refunded.
 /// On a successful campaign they are paid to the recipient together with the recorded contributions.
@@ -42,6 +47,8 @@ contract Campaign is Initializable, ReentrancyGuard {
     uint256 public target;
     uint64 public deadline;
     bytes32 public metadataHash;
+    /// @notice Platform fee in basis points, copied from the factory at creation and never changed afterwards.
+    uint16 public feeBps;
 
     uint256 public totalRaised;
     uint256 public totalRefunded;
@@ -51,7 +58,7 @@ contract Campaign is Initializable, ReentrancyGuard {
     mapping(address donor => uint256 amount) public contributionOf;
 
     event Contributed(address indexed donor, uint256 amount, uint256 totalRaised);
-    event Withdrawn(address indexed recipient, address indexed to, uint256 amount);
+    event Withdrawn(address indexed recipient, address indexed to, uint256 amount, uint256 fee);
     event Refunded(address indexed donor, uint256 amount);
     event Cancelled(address indexed by);
 
@@ -78,7 +85,8 @@ contract Campaign is Initializable, ReentrancyGuard {
         address recipient_,
         uint256 target_,
         uint64 deadline_,
-        bytes32 metadataHash_
+        bytes32 metadataHash_,
+        uint16 feeBps_
     ) external initializer {
         if (address(token_) == address(0) || organiser_ == address(0) || recipient_ == address(0)) revert ZeroAddress();
         if (target_ == 0) revert InvalidTarget();
@@ -91,6 +99,7 @@ contract Campaign is Initializable, ReentrancyGuard {
         target = target_;
         deadline = deadline_;
         metadataHash = metadataHash_;
+        feeBps = feeBps_;
     }
 
     // ------------------------------------------------------------------
@@ -168,10 +177,19 @@ contract Campaign is Initializable, ReentrancyGuard {
         if (status() != Status.Successful) revert NotSuccessful();
 
         withdrawn = true;
-        uint256 amount = token.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
+
+        // The fee is best-effort: if the treasury cannot receive it (unset, or blocked by the token issuer),
+        // the recipient receives the full balance instead, so the fee can never block a payout.
+        uint256 fee = (balance * feeBps) / 10_000;
+        if (fee != 0) {
+            address treasury = IFeeSource(factory).treasury();
+            if (treasury == address(0) || !token.trySafeTransfer(treasury, fee)) fee = 0;
+        }
+        uint256 amount = balance - fee;
 
         token.safeTransfer(to, amount);
-        emit Withdrawn(recipient, to, amount);
+        emit Withdrawn(recipient, to, amount, fee);
     }
 
     // ------------------------------------------------------------------
