@@ -1,0 +1,9 @@
+{
+  "campaignFactory": "0x6C2c217504C1604aD1f205c5197f16aaaFC573F8",
+  "chainId": 84532,
+  "implementation": "0x9Bd96F64AfBC075A320c0c7F35cd900185751769",
+  "startBlock": 50229127,
+  "tokens": [
+    "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+  ]
+}
