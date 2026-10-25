@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.next/
+dist/
+coverage/
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/types/
+packages/contracts/ignition/deployments/chain-31337/
+.taste-skill/
+.solidity-auditor/
+notes/
+.DS_Store

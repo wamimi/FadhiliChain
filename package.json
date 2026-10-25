@@ -1,0 +1,11 @@
+{
+  "name": "fadhili-chain",
+  "private": true,
+  "packageManager": "pnpm@12.15.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "contracts:build": "pnpm --filter @fadhili/contracts build",
+    "contracts:test": "pnpm --filter @fadhili/contracts test",
+    "dev": "pnpm --filter @fadhili/web dev"
+  }
+}
