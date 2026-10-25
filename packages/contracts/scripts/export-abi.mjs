@@ -1,9 +1,10 @@
-// Copies the ABIs the web app needs from Hardhat artifacts into abi/*.ts (typed `as const` for viem).
+// Copies the ABIs the web app needs from Foundry build output (out/) into abi/index.ts, typed `as const` for viem.
+// Run `forge build` first.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const contracts = {
-  CampaignFactory: "artifacts/contracts/CampaignFactory.sol/CampaignFactory.json",
-  Campaign: "artifacts/contracts/Campaign.sol/Campaign.json",
+  CampaignFactory: "out/CampaignFactory.sol/CampaignFactory.json",
+  Campaign: "out/Campaign.sol/Campaign.json",
 };
 
 mkdirSync("abi", { recursive: true });
