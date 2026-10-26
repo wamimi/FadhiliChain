@@ -18,7 +18,8 @@ create table public.campaigns (
   organiser          text not null,                    -- organiser wallet address (lowercase)
   recipient          text not null,                    -- payout wallet address (lowercase)
   token              text not null,
-  target             numeric(78, 0) not null,          -- smallest token units
+  -- Token amounts are stored as digit strings: JSON numbers lose precision above 2^53 (1 KESm = 10^18 units).
+  target             text not null check (target ~ '^[0-9]+$'),  -- smallest token units
   deadline           timestamptz not null,
   metadata_hash      text not null,                    -- keccak256 of the story fields, signed by the organiser
   request            jsonb not null,                   -- the EIP-712 CampaignRequest as signed
@@ -49,7 +50,7 @@ create table public.contributions (
   tx_hash        text not null,
   log_index      integer not null,
   donor          text not null,
-  amount         numeric(78, 0) not null,
+  amount         text not null check (amount ~ '^[0-9]+$'),  -- smallest token units, as a digit string
   block_number   bigint not null,
   block_time     timestamptz not null,
   display_name   text,
