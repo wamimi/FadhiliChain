@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PrivyProvider, usePrivy, useWallets, useIdentityToken } from "@privy-io/react-auth";
-import { WagmiProvider as PrivyWagmiProvider } from "@privy-io/wagmi";
+import { WagmiProvider as PrivyWagmiProvider, useSetActiveWallet } from "@privy-io/wagmi";
+import { useConnection } from "wagmi";
+import { setExpectedAccount } from "@/lib/tx";
 import { WagmiProvider } from "wagmi";
 import { getAddress, type Address } from "viem";
 import { Toaster, toast } from "sonner";
@@ -38,6 +40,18 @@ function PrivySession({ children }: { children: ReactNode }) {
   const { wallets } = useWallets();
   const { identityToken } = useIdentityToken();
   const wallet = wallets.find((w) => w.walletClientType === "privy") ?? wallets[0];
+  const { setActiveWallet } = useSetActiveWallet();
+  const { address: activeAddress } = useConnection();
+
+  // Sign with the FadhiliChain account, not with a browser extension wallet that may also be connected.
+  useEffect(() => {
+    if (!authenticated || !wallet) {
+      setExpectedAccount(null);
+      return;
+    }
+    setExpectedAccount({ address: getAddress(wallet.address), activate: () => setActiveWallet(wallet) });
+    if (activeAddress?.toLowerCase() !== wallet.address.toLowerCase()) void setActiveWallet(wallet);
+  }, [authenticated, wallet, activeAddress, setActiveWallet]);
   const session = useMemo<Session>(
     () => ({
       enabled: true,

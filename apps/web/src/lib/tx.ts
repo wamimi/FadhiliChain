@@ -3,8 +3,24 @@ import { getConnection, readContract, switchChain, waitForTransactionReceipt, wr
 import { BaseError, ContractFunctionRevertedError, erc20Abi, type Address, type Hex } from "viem";
 import { campaignAbi } from "@fadhili/contracts/abi";
 
+/**
+ * The account the app should sign with (the user's FadhiliChain account) and a way to make it the active one.
+ * Registered by the session provider, so a browser extension wallet that happens to be connected is never used by mistake.
+ */
+let expected: { address: Address; activate: () => Promise<void> } | null = null;
+export function setExpectedAccount(next: typeof expected) {
+  expected = next;
+}
+
 export async function ensureChain(config: Config, chainId: number) {
-  const conn = getConnection(config);
+  let conn = getConnection(config);
+  if (expected && conn.address?.toLowerCase() !== expected.address.toLowerCase()) {
+    await expected.activate();
+    conn = getConnection(config);
+    if (conn.address?.toLowerCase() !== expected.address.toLowerCase()) {
+      throw new Error("Your FadhiliChain account is still loading. Try again in a moment.");
+    }
+  }
   if (!conn.address) throw new Error("Your account is still loading. Try again in a moment.");
   if (conn.chainId !== chainId) await switchChain(config, { chainId });
   return conn.address as Address;
