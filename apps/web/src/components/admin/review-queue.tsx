@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConfig } from "wagmi";
@@ -34,14 +36,23 @@ export function ReviewQueue() {
     enabled: session.authenticated && Boolean(session.idToken),
   });
 
-  if (!session.authenticated) {
+  // Anyone who is not a reviewer gets the same "not found" page as a mistyped link, so the page reveals nothing.
+  // Access is enforced by the server (/api/reviews checks the reviewer role on-chain) and by the contract itself.
+  if (!session.ready || (session.authenticated && !q.data && !q.error)) {
     return (
-      <div className="max-w-2xl pt-10">
-        <h1 className="display text-[clamp(2.6rem,6vw,5rem)]">Review queue</h1>
-        <p className="mt-5 text-lg text-muted">For reviewers. Sign in with the account that holds the reviewer role.</p>
-        <button className="pill pill-ink mt-8" onClick={session.login}>
-          Sign in
-        </button>
+      <p className="flex items-center gap-2 pt-16 text-muted">
+        <Loader2 size={18} className="animate-spin" /> Loading
+      </p>
+    );
+  }
+  if (!session.authenticated || q.error || (q.data && !q.data.reviewer)) {
+    return (
+      <div className="max-w-2xl pt-16">
+        <h1 className="display text-[clamp(2.6rem,6vw,5rem)]">Page not found</h1>
+        <p className="mt-5 text-lg text-muted">The link may be mistyped, or the page may have moved.</p>
+        <Link href="/" className="pill pill-ink mt-8">
+          Go home
+        </Link>
       </div>
     );
   }
@@ -50,20 +61,9 @@ export function ReviewQueue() {
     <div className="pt-6">
       <h1 className="display text-[clamp(2.6rem,6vw,5rem)]">Review queue</h1>
       <p className="mt-4 max-w-[62ch] text-muted">
-        Call the organiser, check their evidence, then approve. Approving creates the campaign contract with exactly the terms the organiser signed; you can approve or decline, but you can&apos;t edit them.
+        Contact the organiser, check their evidence, then approve. Approving creates the fundraiser with exactly the terms the organiser submitted; you can approve or decline, but you can&apos;t edit them.
       </p>
       <div className="mt-10">
-        {q.isLoading && (
-          <p className="flex items-center gap-2 text-muted">
-            <Loader2 size={18} className="animate-spin" /> Loading
-          </p>
-        )}
-        {q.error && <p className="rounded-2xl bg-sand p-4">{(q.error as Error).message}</p>}
-        {q.data && !q.data.reviewer && (
-          <p className="rounded-2xl bg-sand p-5">
-            This account doesn&apos;t hold the reviewer role. Your account address is <span className="tabular font-semibold">{session.address}</span>; an administrator can grant access to it.
-          </p>
-        )}
         {q.data?.reviewer && q.data.items.length === 0 && <p className="rounded-2xl bg-sand p-5">Nothing waiting for review.</p>}
         <div className="space-y-6">{q.data?.items.map((it) => <ReviewCard key={it.campaign.id} item={it} />)}</div>
       </div>
