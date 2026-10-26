@@ -54,9 +54,14 @@ export function MobileMenu({ tone }: { tone: "light" | "dark" }) {
           </nav>
           <div className="mt-auto flex flex-col gap-3">
             {s.authenticated ? (
-              <Link href="/me" className="pill pill-lime">
-                My account
-              </Link>
+              <>
+                <Link href="/me" className="pill pill-lime">
+                  My account
+                </Link>
+                <button type="button" onClick={() => void s.logout()} className="pill pill-ghost-light">
+                  Log out
+                </button>
+              </>
             ) : (
               <button type="button" onClick={s.login} className="pill pill-lime">
                 Log in

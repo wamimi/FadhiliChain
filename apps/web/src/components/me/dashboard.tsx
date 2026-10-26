@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "../providers";
 import { useApi } from "@/lib/api";
@@ -63,15 +63,20 @@ export function Dashboard() {
             Signed in as <b className="text-ink">{session.label ?? "you"}</b>
           </p>
         </div>
-        {session.address && (
-          <button
-            className="tabular inline-flex items-center gap-2 self-start rounded-full bg-sand px-4 py-2 text-sm font-semibold lg:self-auto"
-            onClick={() => navigator.clipboard.writeText(session.address!).then(() => toast("Account address copied"))}
-            title="Your account ID"
-          >
-            {shortAddress(session.address)} <Copy size={14} />
+        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+          {session.address && (
+            <button
+              className="tabular inline-flex items-center gap-2 rounded-full bg-sand px-4 py-2 text-sm font-semibold"
+              onClick={() => navigator.clipboard.writeText(session.address!).then(() => toast("Account ID copied"))}
+              title="Your account ID"
+            >
+              {shortAddress(session.address)} <Copy size={14} />
+            </button>
+          )}
+          <button className="pill pill-ghost min-h-10 px-4 text-sm" onClick={() => void session.logout()}>
+            <LogOut size={15} /> Log out
           </button>
-        )}
+        </div>
       </div>
 
       {q.isLoading && <Spinner />}
