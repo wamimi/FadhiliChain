@@ -18,7 +18,10 @@ const MINT_ABI = parseAbi(["function mint(address to, uint256 amount)"]);
 
 const recent = new Map<string, number>(); // fallback rate limit when no database
 
-const native = (chainId: number) => (chainInfo(chainId)?.chain.nativeCurrency.symbol === "CELO" ? "CELO" : "ETH");
+/** Network coin used for fees. viem names Celo Sepolia's coin "S-CELO", so match on the name, not the exact symbol. */
+const native = (chainId: number) => (chainInfo(chainId)?.chain.nativeCurrency.name === "CELO" ? "CELO" : "ETH");
+/** Top-ups allowed per account per network per day. Each one only happens when the balance is actually low. */
+const MAX_GRANTS_PER_DAY = 5;
 const topUp = (chainId: number) =>
   parseEther(native(chainId) === "CELO" ? (process.env.GAS_TOPUP_CELO ?? "0.05") : (process.env.GAS_TOPUP_ETH ?? "0.0003"));
 
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
         .eq("chain_id", chainId)
         .eq("address", address.toLowerCase())
         .gte("created_at", new Date(dayAgo).toISOString());
-      if ((count ?? 0) > 0) return Response.json({ sent: [], note: "Already topped up today" });
+      if ((count ?? 0) >= MAX_GRANTS_PER_DAY) return Response.json({ sent: [], note: "Daily top-up limit reached" });
     } else if ((recent.get(key) ?? 0) > dayAgo) {
       return Response.json({ sent: [], note: "Already topped up today" });
     }
